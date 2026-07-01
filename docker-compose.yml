@@ -1,0 +1,161 @@
+# Dev compose for Binesh.
+#
+#   docker compose up --build       # api + postgres + adminer + minio + migrator
+#   docker compose down -v          # nuke containers AND volumes
+#
+# After up:
+#   API      → http://localhost:8080
+#   Swagger  → http://localhost:8080/swagger
+#   Adminer  → http://localhost:8081     (server=postgres, user=binesh, password=binesh)
+#   MinIO    → http://localhost:9001     (admin/adminadmin)
+#   Postgres → localhost:5432            (host port; internal docker is also 5432)
+#
+# All env vars use inline defaults so this works with no .env file.
+# For prod, see docker-compose.prod.yml + a real .env file with secrets.
+
+name: binesh
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: binesh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-binesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-binesh}
+      POSTGRES_DB:       ${POSTGRES_DB:-binesh}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-binesh} -d ${POSTGRES_DB:-binesh}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [binesh-net]
+
+  adminer:
+    image: adminer:latest
+    container_name: binesh-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [binesh-net]
+
+  minio:
+    image: minio/minio:latest
+    container_name: binesh-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-adminadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [binesh-net]
+
+  # One-shot container that applies pending EF migrations, then exits.
+  # 'condition: service_completed_successfully' below gates the API on this.
+  # Reuses the image built by the 'api' service — no separate build (otherwise
+  # two services racing to export the same image tag fails the build).
+  migrator:
+    image: binesh-api:dev
+    container_name: binesh-migrator
+    command: ["migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-binesh};Username=${POSTGRES_USER:-binesh};Password=${POSTGRES_PASSWORD:-binesh}"
+      # OpenAI vars only needed because the host validates them on start.
+      # The migrator never calls OpenAI.
+      OpenAI__ApiKey: "sk-migrator-placeholder"
+      OpenAI__BaseUrl: "https://api.openai.com/v1"
+      OpenAI__Model: "gpt-4o-mini"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [binesh-net]
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Binesh.Api/Dockerfile
+    image: binesh-api:dev
+    container_name: binesh-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-binesh};Username=${POSTGRES_USER:-binesh};Password=${POSTGRES_PASSWORD:-binesh}"
+      OpenAI__ApiKey:    ${OPENAI_API_KEY:-sk-dev-placeholder}
+      OpenAI__BaseUrl:   ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OpenAI__Model:     ${OPENAI_MODEL:-gpt-4o-mini}
+      OpenAI__FallbackModel: ${OPENAI_FALLBACK_MODEL:-}
+      # MinIO (Round 15). MinioSettings is ValidateOnStart with AccessKey/SecretKey
+      # [Required] and no defaults — the API will NOT boot without these.
+      Minio__Endpoint:   ${MINIO_ENDPOINT:-minio:9000}
+      Minio__AccessKey:  ${MINIO_ROOT_USER:-admin}
+      Minio__SecretKey:  ${MINIO_ROOT_PASSWORD:-adminadmin}
+      Minio__BucketName: ${MINIO_BUCKET:-binesh}
+      Minio__UseSsl:     "false"
+      # SMS. Defaults to "log" (OTP printed to logs). Set SMS_PROVIDER=ippanel in
+      # .env (plus the Ippanel creds) to send real SMS via IPPanel pattern API.
+      Sms__Provider:                 ${SMS_PROVIDER:-log}
+      Sms__Ippanel__BaseUrl:         ${SMS_IPPANEL_BASEURL:-https://edge.ippanel.com/v1}
+      Sms__Ippanel__ApiKey:          ${SMS_IPPANEL_APIKEY:-}
+      Sms__Ippanel__FromPhoneNumber: ${SMS_IPPANEL_FROM:-}
+      Sms__Ippanel__PatternCode:     ${SMS_IPPANEL_PATTERN:-}
+      # Dev/demo data seeder. Set SEED_INITIAL_DATA=true in .env to populate
+      # products/customers/sales/returns via the CRUD handlers on boot (idempotent).
+      Seed__InitialData:             ${SEED_INITIAL_DATA:-false}
+      # JWT cert is generated in-memory in dev (see Binesh.Identity).
+      # For "prod-shaped dev", uncomment and provide a real cert:
+      # Jwt__SigningCertificatePath: /run/secrets/jwt-signing.pfx
+      # Jwt__SigningCertificatePassword: ${JWT_CERT_PASSWORD}
+      Cors__AllowedOrigins__0: "http://localhost:3000"
+      Cors__AllowedOrigins__1: "http://localhost:5173"
+      # Bootstrap SuperAdmin (created once on first boot if not already present).
+      # Override in prod via real .env on the host.
+      Seed__SuperAdmin__PhoneNumber: ${SEED_SUPERADMIN_PHONE:-+989121234567}
+      Seed__SuperAdmin__FirstName:   ${SEED_SUPERADMIN_FIRST_NAME:-Super}
+      Seed__SuperAdmin__LastName:    ${SEED_SUPERADMIN_LAST_NAME:-Admin}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks: [binesh-net]
+
+volumes:
+  postgres-data:
+  minio-data:
+
+networks:
+  binesh-net:
+    driver: bridge

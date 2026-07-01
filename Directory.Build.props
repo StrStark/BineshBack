@@ -1,0 +1,41 @@
+<Project>
+
+  <!--
+    Shared build settings for every project in the Binesh solution.
+    Per-project csproj files override these only when they truly need to.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Code-quality gates -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!--
+      Promote a focused set of warnings to errors so they can never be merged.
+      Full TreatWarningsAsErrors is left off during early rewrite; flip on in CI later.
+    -->
+    <WarningsAsErrors>
+      Nullable;
+      CS4014;   <!-- await not used -->
+      CS1998;   <!-- async method lacks await -->
+      CS8602;   <!-- dereference of possibly null reference -->
+    </WarningsAsErrors>
+
+    <!-- Deterministic builds + source link -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Don't generate Class1.cs noise for new libs -->
+    <NoWarn>$(NoWarn);CA1014</NoWarn>
+  </PropertyGroup>
+
+  <!-- Tests don't need to be packable -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

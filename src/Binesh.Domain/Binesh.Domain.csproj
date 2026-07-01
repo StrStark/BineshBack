@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- IdentityUser<TKey> + IdentityRole<TKey>. Abstractions only, no EF or ASP.NET Core. -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.1" />
+  </ItemGroup>
+
+</Project>

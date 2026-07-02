@@ -21,4 +21,5 @@ public sealed record UserDto(
     /// is about to render the image); list / admin endpoints leave it
     /// <c>null</c> so each query doesn't pay the storage round-trip per row.
     /// </summary>
-    string? ProfileImageUrl = null);
+    string? ProfileImageUrl = null,
+    Guid? CompanyId = null);

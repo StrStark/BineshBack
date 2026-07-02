@@ -26,11 +26,12 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProductComm
     }
 }
 
-public sealed class CreateProductHandler(IBineshDbContext db)
+public sealed class CreateProductHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<CreateProductCommand, ProductDto>
 {
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
+        var companyId = tenantContext.RequireCompanyId();
         var exists = await db.Products
             .AnyAsync(p => p.ProductCode == request.ProductCode, cancellationToken);
         if (exists)
@@ -41,6 +42,7 @@ public sealed class CreateProductHandler(IBineshDbContext db)
         }
 
         var product = Product.Create(
+            companyId,
             request.Type,
             request.ProductCode,
             request.ProductDescription,

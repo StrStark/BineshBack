@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+using Binesh.Application.Abstractions;
 using Binesh.Domain.Identity;
 using Binesh.Identity.Configuration;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,11 @@ internal sealed class JwtTokenService(
             new(ClaimTypes.Name, user.UserName ?? user.PhoneNumber ?? string.Empty),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+
+        if (user.CompanyId is Guid companyId)
+        {
+            claims.Add(new Claim(TenantClaimTypes.CompanyId, companyId.ToString()));
+        }
 
         foreach (var role in roles)
         {

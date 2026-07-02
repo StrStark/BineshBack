@@ -1,8 +1,11 @@
+using Binesh.Application.Abstractions;
 using Binesh.Domain.Identity;
+using Binesh.Domain.Tenancy;
 using Binesh.Identity.Authorization;
 using Binesh.Identity.Configuration;
 using Binesh.Identity.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,16 +34,19 @@ internal sealed class IdentityBootstrapService(
         using var scope = services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Role>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var db = scope.ServiceProvider.GetRequiredService<IBineshDbContext>();
 
         await EnsureRolesAsync(roleManager);
-        await EnsureSuperAdminAsync(userManager);
+        var defaultCompanyId = await EnsureDefaultCompanyAsync(db, cancellationToken);
+        await EnsureSuperAdminAsync(userManager, defaultCompanyId);
+        await AttachUnassignedUsersAsync(db, defaultCompanyId, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private async Task EnsureRolesAsync(RoleManager<Role> roleManager)
     {
-        foreach (var roleName in new[] { AppRoles.SuperAdmin, AppRoles.Admin })
+        foreach (var roleName in AppRoles.All)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
             {
@@ -56,7 +62,28 @@ internal sealed class IdentityBootstrapService(
         }
     }
 
-    private async Task EnsureSuperAdminAsync(UserManager<User> userManager)
+    private async Task<Guid> EnsureDefaultCompanyAsync(IBineshDbContext db, CancellationToken cancellationToken)
+    {
+        var seed = seedOptions.Value.Company;
+        var slug = string.IsNullOrWhiteSpace(seed.Slug) ? "binesh" : seed.Slug.Trim().ToLowerInvariant();
+        var existing = await db.Companies
+            .Where(c => c.Slug == slug)
+            .Select(c => (Guid?)c.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (existing is Guid id) { return id; }
+
+        var company = new Company
+        {
+            Name = string.IsNullOrWhiteSpace(seed.Name) ? "Binesh" : seed.Name.Trim(),
+            Slug = slug,
+        };
+        db.Companies.Add(company);
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Seeded default company {Company} ({Slug})", company.Name, company.Slug);
+        return company.Id;
+    }
+
+    private async Task EnsureSuperAdminAsync(UserManager<User> userManager, Guid defaultCompanyId)
     {
         var seed = seedOptions.Value.SuperAdmin;
         var rawPhone = seed.PhoneNumber;
@@ -78,6 +105,11 @@ internal sealed class IdentityBootstrapService(
         var existing = await userManager.GetUsersInRoleAsync(AppRoles.SuperAdmin);
         if (existing.Count > 0)
         {
+            foreach (var admin in existing.Where(a => a.CompanyId is null))
+            {
+                admin.CompanyId = defaultCompanyId;
+                await userManager.UpdateAsync(admin);
+            }
             logger.LogDebug(
                 "SuperAdmin already exists ({Count}). Seed skipped.", existing.Count);
             return;
@@ -90,6 +122,7 @@ internal sealed class IdentityBootstrapService(
             PhoneNumberConfirmed = true,    // pre-confirmed so they can sign in
             FirstName = seed.FirstName,
             LastName = seed.LastName,
+            CompanyId = defaultCompanyId,
         };
 
         var createResult = await userManager.CreateAsync(user);
@@ -104,5 +137,28 @@ internal sealed class IdentityBootstrapService(
         logger.LogWarning(
             "Seeded SuperAdmin {Phone} — use this account to bootstrap other admins.",
             phone);
+    }
+
+    private async Task AttachUnassignedUsersAsync(
+        IBineshDbContext db,
+        Guid defaultCompanyId,
+        CancellationToken cancellationToken)
+    {
+        var users = await db.Users
+            .Where(u => u.CompanyId == null)
+            .ToListAsync(cancellationToken);
+
+        if (users.Count == 0) { return; }
+
+        foreach (var user in users)
+        {
+            user.CompanyId = defaultCompanyId;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation(
+            "Attached {Count} users without CompanyId to default company {CompanyId}.",
+            users.Count,
+            defaultCompanyId);
     }
 }

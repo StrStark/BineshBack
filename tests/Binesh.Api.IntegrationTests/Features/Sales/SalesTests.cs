@@ -302,14 +302,15 @@ public sealed class SalesTests(BineshApiFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        var companyId = await db.Companies.Select(c => c.Id).FirstAsync();
 
-        var product1 = Product.Create(ProductType.Carpet, "PROD-1", "Carpet line 1", "600 reed");
-        var product2 = Product.Create(ProductType.Rug, "PROD-2", "Rug line 2", "small");
+        var product1 = Product.Create(companyId, ProductType.Carpet, "PROD-1", "Carpet line 1", "600 reed");
+        var product2 = Product.Create(companyId, ProductType.Rug, "PROD-2", "Rug line 2", "small");
 
         var person1 = Person.Create("Ali", "Ahmadi", null, null, "09121111111", null, null, null, null, null);
         var person2 = Person.Create("Sara", "Karimi", null, null, "09122222222", null, null, null, null, null);
-        var c1 = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, person1);
-        var c2 = Customer.Create(CustomerType.Bedehkaran, true, 0.5f, person2);
+        var c1 = Customer.Create(companyId, CustomerType.MoshtarianKhanegi, true, 0.8f, person1);
+        var c2 = Customer.Create(companyId, CustomerType.Bedehkaran, true, 0.5f, person2);
 
         db.Products.AddRange(product1, product2);
         db.Customers.AddRange(c1, c2);

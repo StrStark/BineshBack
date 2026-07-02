@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Binesh.Domain.Financial;
+using Binesh.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -14,6 +15,7 @@ internal sealed class FinancialMappingSettingsConfiguration : IEntityTypeConfigu
         builder.ToTable("financial_mapping_settings");
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(s => s.CompanyId).IsRequired();
 
         ConfigureJson(builder, s => s.OperationalCost);
         ConfigureJson(builder, s => s.Payables);
@@ -25,6 +27,15 @@ internal sealed class FinancialMappingSettingsConfiguration : IEntityTypeConfigu
         ConfigureJson(builder, s => s.ToCalculateNetProfitLoss);
         ConfigureJson(builder, s => s.ToCalculateAccumulatedProfitLoss);
         ConfigureJson(builder, s => s.ToCalculateEquity);
+
+        builder.HasOne<Company>()
+               .WithMany()
+               .HasForeignKey(s => s.CompanyId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(s => s.CompanyId)
+               .IsUnique()
+               .HasDatabaseName("ux_financial_mapping_settings_company");
     }
 
     private static void ConfigureJson(

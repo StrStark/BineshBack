@@ -6,11 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Binesh.Application.Features.Customers.CreateCustomer;
 
-public sealed class CreateCustomerHandler(IBineshDbContext db)
+public sealed class CreateCustomerHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<CreateCustomerCommand, CustomerDto>
 {
     public async Task<CustomerDto> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
+        var companyId = tenantContext.RequireCompanyId();
         var region = await ResolveRegionAsync(request.Person.Region, cancellationToken);
 
         var person = Person.Create(
@@ -26,6 +27,7 @@ public sealed class CreateCustomerHandler(IBineshDbContext db)
             region);
 
         var customer = Customer.Create(
+            companyId,
             request.Type,
             request.Active,
             request.PaymentReliability,

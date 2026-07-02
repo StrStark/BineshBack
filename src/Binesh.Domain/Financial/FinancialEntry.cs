@@ -11,6 +11,7 @@ namespace Binesh.Domain.Financial;
 public sealed class FinancialEntry
 {
     public Guid Id { get; private set; }
+    public Guid CompanyId { get; private set; }
 
     /// <summary>Hierarchical account code (Kol Code in old code).</summary>
     public string Code { get; private set; } = default!;
@@ -29,8 +30,12 @@ public sealed class FinancialEntry
     // EF Core
     private FinancialEntry() { }
 
-    public static FinancialEntry Create(string code, string name, string type, long debit, long credit)
+    public static FinancialEntry Create(Guid companyId, string code, string name, string type, long debit, long credit)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new ArgumentException("CompanyId is required.", nameof(companyId));
+        }
         if (string.IsNullOrWhiteSpace(code))
         {
             throw new ArgumentException("Code is required.", nameof(code));
@@ -55,6 +60,7 @@ public sealed class FinancialEntry
         return new FinancialEntry
         {
             Id = Guid.NewGuid(),
+            CompanyId = companyId,
             Code = code.Trim(),
             Name = name.Trim(),
             Type = type.Trim(),

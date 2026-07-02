@@ -126,8 +126,9 @@ public sealed class AiEndpointTests(BineshApiFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        var companyId = await db.Companies.Select(c => c.Id).FirstAsync();
         var person = Person.Create("Ai", "Fixture", null, null, "0921", null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, person);
+        var customer = Customer.Create(companyId, CustomerType.MoshtarianKhanegi, true, 0.8f, person);
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
     }

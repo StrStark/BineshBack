@@ -58,7 +58,8 @@ public sealed class ListUsersHandler(IBineshDbContext db)
                 u.ProfileImageName,
                 rolesByUser.TryGetValue(u.Id, out var r) ? r : string.Empty,
                 u.PhoneNumberConfirmed,
-                u.CreatedAt))
+                u.CreatedAt,
+                CompanyId: u.CompanyId))
             .ToList();
 
         return new ListUsersResponse(items, totalCount, request.Page, request.PageSize);

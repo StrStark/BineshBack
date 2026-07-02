@@ -22,7 +22,8 @@ namespace Binesh.Ai.Orchestration;
 public sealed class AiOrchestrator(
     IAiChatClient chatClient,
     QueryToolRegistry toolRegistry,
-    ITokenBudget tokenBudget)
+    ITokenBudget tokenBudget,
+    AiRequestContext? requestContext = null)
 {
     public const int MaxToolIterations = 5;
 
@@ -35,6 +36,8 @@ public sealed class AiOrchestrator(
         IReadOnlyList<AiHistoryTurn> history,
         CancellationToken cancellationToken)
     {
+        if (requestContext is not null) { requestContext.UserId = userId; }
+
         var systemPrompt = Prompts.Prompts.SystemInstructions + "\n\n" + QueryPromptBuilder.Build(toolRegistry);
 
         var messages = new List<ChatMessage> { new SystemChatMessage(systemPrompt) };
@@ -107,6 +110,8 @@ public sealed class AiOrchestrator(
         IReadOnlyList<AiHistoryTurn> history,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (requestContext is not null) { requestContext.UserId = userId; }
+
         var systemPrompt = Prompts.Prompts.SystemInstructions + "\n\n" + QueryPromptBuilder.Build(toolRegistry);
 
         var messages = new List<ChatMessage> { new SystemChatMessage(systemPrompt) };

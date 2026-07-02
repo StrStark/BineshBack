@@ -2,6 +2,7 @@ using System.ClientModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Binesh.Ai.Configuration;
+using Binesh.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI;
@@ -10,16 +11,17 @@ using OpenAI.Chat;
 namespace Binesh.Ai.Orchestration;
 
 /// <summary>
-/// Real OpenAI-backed <see cref="IAiChatClient"/>. Picks the model from
-/// <see cref="OpenAiSettings"/>; on rate-limit (HTTP 429) retries once with
-/// <see cref="OpenAiSettings.FallbackModel"/> if configured.
+/// Real OpenAI-backed <see cref="IAiChatClient"/>. The orchestrator sets the
+/// current user id in <see cref="AiRequestContext"/>; this client then uses
+/// per-user provider settings when configured, falling back to global
+/// <see cref="OpenAiSettings"/>.
 /// </summary>
 public sealed class OpenAiChatClient(
-    OpenAIClient client,
     IOptions<OpenAiSettings> settings,
+    IUserAiSettingsResolver userSettingsResolver,
+    AiRequestContext requestContext,
     ILogger<OpenAiChatClient> logger) : IAiChatClient
 {
-    private readonly OpenAIClient _client = client;
     private readonly OpenAiSettings _settings = settings.Value;
 
     public async Task<AiCompletionResult> CompleteAsync(
@@ -27,28 +29,31 @@ public sealed class OpenAiChatClient(
         IReadOnlyList<ChatTool> tools,
         CancellationToken cancellationToken)
     {
-        var primary = _settings.Model;
+        var runtime = await ResolveRuntimeSettingsAsync(cancellationToken);
         try
         {
-            return await CompleteOnceAsync(primary, messages, tools, cancellationToken);
+            return await CompleteOnceAsync(runtime.Client, runtime.Model, messages, tools, cancellationToken);
         }
-        catch (ClientResultException ex) when (IsRateLimit(ex) && !string.IsNullOrWhiteSpace(_settings.FallbackModel))
+        catch (ClientResultException ex) when (IsRateLimit(ex)
+            && runtime.UsesGlobalSettings
+            && !string.IsNullOrWhiteSpace(_settings.FallbackModel))
         {
             logger.LogWarning(
                 "Primary model '{Primary}' returned 429; retrying with fallback '{Fallback}'.",
-                primary, _settings.FallbackModel);
+                runtime.Model, _settings.FallbackModel);
 
-            return await CompleteOnceAsync(_settings.FallbackModel!, messages, tools, cancellationToken);
+            return await CompleteOnceAsync(runtime.Client, _settings.FallbackModel!, messages, tools, cancellationToken);
         }
     }
 
-    private async Task<AiCompletionResult> CompleteOnceAsync(
+    private static async Task<AiCompletionResult> CompleteOnceAsync(
+        OpenAIClient client,
         string model,
         IReadOnlyList<ChatMessage> messages,
         IReadOnlyList<ChatTool> tools,
         CancellationToken ct)
     {
-        var chat = _client.GetChatClient(model);
+        var chat = client.GetChatClient(model);
         var options = new ChatCompletionOptions();
         foreach (var t in tools) { options.Tools.Add(t); }
 
@@ -74,16 +79,11 @@ public sealed class OpenAiChatClient(
         IReadOnlyList<ChatTool> tools,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // Streaming doesn't fall back to the fallback model — the WS protocol
-        // doesn't expose a clean retry signal, and the budget enforcer will
-        // already 429 before we get here when the user is over their cap.
-        var chat = _client.GetChatClient(_settings.Model);
+        var runtime = await ResolveRuntimeSettingsAsync(cancellationToken);
+        var chat = runtime.Client.GetChatClient(runtime.Model);
         var options = new ChatCompletionOptions();
         foreach (var t in tools) { options.Tools.Add(t); }
 
-        // The SDK delivers tool-call arguments as many small fragments; we
-        // accumulate by index until FinishReason arrives, then emit one
-        // AiStreamToolCall per assembled call.
         var partials = new Dictionary<int, ToolCallAccumulator>();
         var usage = AiTokenUsage.Zero;
         string finishReason = "stop";
@@ -127,7 +127,44 @@ public sealed class OpenAiChatClient(
             yield return new AiStreamToolCall(acc.Id, acc.FunctionName, acc.Arguments.ToString());
         }
 
-        yield return new AiStreamFinished(finishReason, usage, _settings.Model);
+        yield return new AiStreamFinished(finishReason, usage, runtime.Model);
+    }
+
+    private async Task<RuntimeOpenAiSettings> ResolveRuntimeSettingsAsync(CancellationToken ct)
+    {
+        if (requestContext.UserId is Guid userId)
+        {
+            var userSettings = await userSettingsResolver.ResolveAsync(userId, ct);
+            if (userSettings is not null)
+            {
+                var baseUrl = string.IsNullOrWhiteSpace(userSettings.BaseUrl)
+                    ? _settings.BaseUrl
+                    : userSettings.BaseUrl!;
+                var model = string.IsNullOrWhiteSpace(userSettings.Model)
+                    ? _settings.Model
+                    : userSettings.Model!;
+                return new RuntimeOpenAiSettings(
+                    BuildClient(userSettings.ApiKey, baseUrl),
+                    model,
+                    UsesGlobalSettings: false);
+            }
+        }
+
+        return new RuntimeOpenAiSettings(
+            BuildClient(_settings.ApiKey, _settings.BaseUrl),
+            _settings.Model,
+            UsesGlobalSettings: true);
+    }
+
+    private OpenAIClient BuildClient(string apiKey, string baseUrl)
+    {
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(baseUrl),
+            NetworkTimeout = _settings.Timeout,
+        };
+
+        return new OpenAIClient(new ApiKeyCredential(apiKey), options);
     }
 
     private sealed class ToolCallAccumulator
@@ -136,4 +173,9 @@ public sealed class OpenAiChatClient(
         public string FunctionName = string.Empty;
         public StringBuilder Arguments { get; } = new();
     }
+
+    private sealed record RuntimeOpenAiSettings(
+        OpenAIClient Client,
+        string Model,
+        bool UsesGlobalSettings);
 }

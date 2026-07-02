@@ -48,6 +48,7 @@ public sealed class UpdateUserHandler(UserManager<User> userManager)
             user.ProfileImageName,
             role,
             user.PhoneNumberConfirmed,
-            user.CreatedAt);
+            user.CreatedAt,
+            CompanyId: user.CompanyId);
     }
 }

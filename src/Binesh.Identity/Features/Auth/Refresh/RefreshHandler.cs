@@ -28,6 +28,7 @@ public sealed class RefreshHandler(
     UserManager<User> userManager,
     IJwtTokenService jwtTokenService,
     IOptions<JwtSettings> jwtOptions,
+    IOptions<SeedSettings> seedOptions,
     ILogger<RefreshHandler> logger)
     : IRequestHandler<RefreshCommand, RefreshResponse>
 {
@@ -78,6 +79,11 @@ public sealed class RefreshHandler(
         existing.MarkUsed(next.Id);
         existing.Session.Touch();
 
+        if (existing.Session.User.CompanyId is null)
+        {
+            existing.Session.User.CompanyId = await ResolveDefaultCompanyIdAsync(cancellationToken);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         var roles = await userManager.GetRolesAsync(existing.Session.User);
@@ -88,5 +94,24 @@ public sealed class RefreshHandler(
             RefreshToken: raw,
             AccessTokenExpiresAt: DateTime.UtcNow.Add(jwt.AccessTokenLifetime),
             RefreshTokenExpiresAt: next.ExpiresAt.UtcDateTime);
+    }
+
+    private async Task<Guid> ResolveDefaultCompanyIdAsync(CancellationToken cancellationToken)
+    {
+        var seed = seedOptions.Value.Company;
+        var slug = string.IsNullOrWhiteSpace(seed.Slug) ? "binesh" : seed.Slug.Trim().ToLowerInvariant();
+
+        var companyId = await db.Companies
+            .Where(c => c.Slug == slug)
+            .Select(c => (Guid?)c.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        companyId ??= await db.Companies
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => (Guid?)c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return companyId
+            ?? throw new InvalidOperationException("No company exists to attach the authenticated user.");
     }
 }

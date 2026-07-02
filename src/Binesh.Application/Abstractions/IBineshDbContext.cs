@@ -1,9 +1,13 @@
 using Binesh.Domain.Chat;
 using Binesh.Domain.Customers;
+using Binesh.Domain.Ai;
+using Binesh.Domain.Dashboards;
 using Binesh.Domain.Financial;
 using Binesh.Domain.Identity;
 using Binesh.Domain.Products;
 using Binesh.Domain.Sales;
+using Binesh.Domain.Support;
+using Binesh.Domain.Tenancy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +29,14 @@ public interface IBineshDbContext
     DbSet<IdentityUserRole<Guid>> UserRoles { get; }
     DbSet<UserSession> Sessions { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<UserPreferences> UserPreferences { get; }
+
+    // Tenancy / dashboard platform
+    DbSet<Company> Companies { get; }
+    DbSet<Dashboard> Dashboards { get; }
+    DbSet<SupportTicket> SupportTickets { get; }
+    DbSet<SupportTicketMessage> SupportTicketMessages { get; }
+    DbSet<UserAiSettings> UserAiSettings { get; }
 
     // Business
     DbSet<Customer> Customers { get; }

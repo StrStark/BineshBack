@@ -22,6 +22,38 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Binesh.Domain.Ai.UserAiSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApiKeyEncrypted")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("ApiKeyPreview")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("BaseUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("user_ai_settings", (string)null);
+                });
+
             modelBuilder.Entity("Binesh.Domain.Chat.ChatMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -98,6 +130,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -116,8 +151,11 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_customers_type");
+                    b.HasIndex("CompanyId", "Active")
+                        .HasDatabaseName("ix_customers_company_active");
+
+                    b.HasIndex("CompanyId", "Type")
+                        .HasDatabaseName("ix_customers_company_type");
 
                     b.ToTable("customers", (string)null);
                 });
@@ -206,6 +244,56 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.ToTable("regions", (string)null);
                 });
 
+            modelBuilder.Entity("Binesh.Domain.Dashboards.Dashboard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("ix_dashboards_updated_at");
+
+                    b.HasIndex("CompanyId", "OwnerUserId")
+                        .HasDatabaseName("ix_dashboards_company_owner");
+
+                    b.ToTable("dashboards", (string)null);
+                });
+
             modelBuilder.Entity("Binesh.Domain.Financial.FinancialEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -217,6 +305,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<long>("Credit")
                         .HasColumnType("bigint");
@@ -236,11 +327,11 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
-                        .HasDatabaseName("ix_financial_entries_code");
+                    b.HasIndex("CompanyId", "Code")
+                        .HasDatabaseName("ix_financial_entries_company_code");
 
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_financial_entries_type");
+                    b.HasIndex("CompanyId", "Type")
+                        .HasDatabaseName("ix_financial_entries_company_type");
 
                     b.ToTable("financial_entries", (string)null);
                 });
@@ -251,6 +342,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("OperationalCost")
                         .IsRequired()
@@ -293,6 +387,10 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_financial_mapping_settings_company");
 
                     b.ToTable("financial_mapping_settings", (string)null);
                 });
@@ -380,6 +478,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("BirthDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -448,6 +549,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId")
+                        .HasDatabaseName("ix_users_company_id");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -456,6 +560,26 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Identity.UserPreferences", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PreferencesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("user_preferences", (string)null);
                 });
 
             modelBuilder.Entity("Binesh.Domain.Identity.UserSession", b =>
@@ -561,6 +685,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -586,12 +713,12 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductCode")
+                    b.HasIndex("CompanyId", "ProductCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_products_code");
+                        .HasDatabaseName("ix_products_company_code");
 
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_products_type");
+                    b.HasIndex("CompanyId", "Type")
+                        .HasDatabaseName("ix_products_company_type");
 
                     b.ToTable("products", (string)null);
                 });
@@ -603,6 +730,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("CounterpartyId")
                         .HasColumnType("uuid");
 
@@ -626,14 +756,18 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CounterpartyId")
-                        .HasDatabaseName("ix_sales_counterparty");
+                    b.HasIndex("CounterpartyId");
 
-                    b.HasIndex("Date")
-                        .HasDatabaseName("ix_sales_date");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_sales_product");
+                    b.HasIndex("CompanyId", "CounterpartyId")
+                        .HasDatabaseName("ix_sales_company_counterparty");
+
+                    b.HasIndex("CompanyId", "Date")
+                        .HasDatabaseName("ix_sales_company_date");
+
+                    b.HasIndex("CompanyId", "ProductId")
+                        .HasDatabaseName("ix_sales_company_product");
 
                     b.ToTable("sales", (string)null);
                 });
@@ -645,6 +779,9 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("CounterpartyId")
                         .HasColumnType("uuid");
 
@@ -668,16 +805,163 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CounterpartyId")
-                        .HasDatabaseName("ix_sales_returns_counterparty");
+                    b.HasIndex("CounterpartyId");
 
-                    b.HasIndex("Date")
-                        .HasDatabaseName("ix_sales_returns_date");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_sales_returns_product");
+                    b.HasIndex("CompanyId", "CounterpartyId")
+                        .HasDatabaseName("ix_sales_returns_company_counterparty");
+
+                    b.HasIndex("CompanyId", "Date")
+                        .HasDatabaseName("ix_sales_returns_company_date");
+
+                    b.HasIndex("CompanyId", "ProductId")
+                        .HasDatabaseName("ix_sales_returns_company_product");
 
                     b.ToTable("sales_returns", (string)null);
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Support.SupportTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_support_tickets_account");
+
+                    b.HasIndex("CompanyId", "Status")
+                        .HasDatabaseName("ix_support_tickets_company_status");
+
+                    b.ToTable("support_tickets", (string)null);
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Support.SupportTicketMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("TicketId", "CreatedAt")
+                        .HasDatabaseName("ix_support_ticket_messages_ticket_created");
+
+                    b.ToTable("support_ticket_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Tenancy.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Domain")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Logo")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_companies_slug");
+
+                    b.ToTable("companies", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -783,6 +1067,15 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Binesh.Domain.Ai.UserAiSettings", b =>
+                {
+                    b.HasOne("Binesh.Domain.Identity.User", null)
+                        .WithOne()
+                        .HasForeignKey("Binesh.Domain.Ai.UserAiSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Binesh.Domain.Chat.ChatMessage", b =>
                 {
                     b.HasOne("Binesh.Domain.Chat.Conversation", null)
@@ -794,6 +1087,12 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Binesh.Domain.Customers.Customer", b =>
                 {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Binesh.Domain.Customers.Person", "Person")
                         .WithMany()
                         .HasForeignKey("PersonId")
@@ -813,6 +1112,39 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.Navigation("Region");
                 });
 
+            modelBuilder.Entity("Binesh.Domain.Dashboards.Dashboard", b =>
+                {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Binesh.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Financial.FinancialEntry", b =>
+                {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Financial.FinancialMappingSettings", b =>
+                {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Binesh.Domain.Identity.RefreshToken", b =>
                 {
                     b.HasOne("Binesh.Domain.Identity.UserSession", "Session")
@@ -822,6 +1154,23 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Identity.User", b =>
+                {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Identity.UserPreferences", b =>
+                {
+                    b.HasOne("Binesh.Domain.Identity.User", null)
+                        .WithOne()
+                        .HasForeignKey("Binesh.Domain.Identity.UserPreferences", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Binesh.Domain.Identity.UserSession", b =>
@@ -844,8 +1193,23 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Binesh.Domain.Products.Product", b =>
+                {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Binesh.Domain.Sales.Sale", b =>
                 {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Binesh.Domain.Customers.Customer", "Counterparty")
                         .WithMany()
                         .HasForeignKey("CounterpartyId")
@@ -865,6 +1229,12 @@ namespace Binesh.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Binesh.Domain.Sales.SalesReturn", b =>
                 {
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Binesh.Domain.Customers.Customer", "Counterparty")
                         .WithMany()
                         .HasForeignKey("CounterpartyId")
@@ -880,6 +1250,35 @@ namespace Binesh.Infrastructure.Persistence.Migrations
                     b.Navigation("Counterparty");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Support.SupportTicket", b =>
+                {
+                    b.HasOne("Binesh.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Binesh.Domain.Tenancy.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Support.SupportTicketMessage", b =>
+                {
+                    b.HasOne("Binesh.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Binesh.Domain.Support.SupportTicket", null)
+                        .WithMany("Messages")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -951,6 +1350,11 @@ namespace Binesh.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Binesh.Domain.Products.Product", b =>
                 {
                     b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("Binesh.Domain.Support.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

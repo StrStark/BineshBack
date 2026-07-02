@@ -65,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryableTool, FinancialQueryTool>();
         services.AddScoped<IQueryableTool, SaleQueryTool>();
         services.AddScoped<IQueryableTool, SalesReturnQueryTool>();
+        services.AddScoped<IQueryableTool, DashboardAnalyticsTool>();
 
         services.AddScoped<QueryToolRegistry>(sp =>
         {
@@ -76,7 +77,8 @@ public static class DependencyInjection
             return registry;
         });
 
-        services.AddSingleton<IAiChatClient, OpenAiChatClient>();
+        services.AddScoped<AiRequestContext>();
+        services.AddScoped<IAiChatClient, OpenAiChatClient>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<ITokenBudget, InMemoryTokenBudget>();
         services.AddScoped<AiOrchestrator>();

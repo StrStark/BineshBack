@@ -194,8 +194,10 @@ public sealed class FinancialTests(BineshApiFactory factory)
         // test focused on the math.
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        var companyId = await db.Companies.Select(c => c.Id).FirstAsync();
 
         var settings = FinancialMappingSettings.Create(
+            companyId,
             toCalculateSales:        [new DetailedItem("Sales", null)],
             operationalCost:         [new DetailedItem("Rent", null)],
             payables:                [new DetailedItem("Payable", null)],
@@ -209,14 +211,14 @@ public sealed class FinancialTests(BineshApiFactory factory)
 
         db.FinancialMappingSettings.Add(settings);
         db.FinancialEntries.AddRange(
-            FinancialEntry.Create("1", "Sales", "Revenue", debit: 0, credit: 10_000),
-            FinancialEntry.Create("2", "Rent", "Expense", debit: 2_000, credit: 0),
-            FinancialEntry.Create("3", "Payable", "Liability", debit: 0, credit: 500),
-            FinancialEntry.Create("4", "Cash", "Asset", debit: 800, credit: 0),
-            FinancialEntry.Create("5", "Tax", "Expense", debit: 100, credit: 0),
-            FinancialEntry.Create("6", "Net", "Other", debit: 0, credit: 50),
-            FinancialEntry.Create("7", "Acc", "Other", debit: 0, credit: 20),
-            FinancialEntry.Create("8", "Equity", "Equity", debit: 0, credit: 5_000));
+            FinancialEntry.Create(companyId, "1", "Sales", "Revenue", debit: 0, credit: 10_000),
+            FinancialEntry.Create(companyId, "2", "Rent", "Expense", debit: 2_000, credit: 0),
+            FinancialEntry.Create(companyId, "3", "Payable", "Liability", debit: 0, credit: 500),
+            FinancialEntry.Create(companyId, "4", "Cash", "Asset", debit: 800, credit: 0),
+            FinancialEntry.Create(companyId, "5", "Tax", "Expense", debit: 100, credit: 0),
+            FinancialEntry.Create(companyId, "6", "Net", "Other", debit: 0, credit: 50),
+            FinancialEntry.Create(companyId, "7", "Acc", "Other", debit: 0, credit: 20),
+            FinancialEntry.Create(companyId, "8", "Equity", "Equity", debit: 0, credit: 5_000));
         await db.SaveChangesAsync();
 
         var response = await _client.GetAsync("/api/financial/panel");

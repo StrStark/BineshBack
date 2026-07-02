@@ -3,6 +3,7 @@ namespace Binesh.Domain.Products;
 public sealed class Product
 {
     public Guid Id { get; private set; }
+    public Guid CompanyId { get; private set; }
     public ProductType Type { get; private set; }
 
     /// <summary>Subtype string from the upstream ETL (e.g. specific carpet line).</summary>
@@ -21,11 +22,16 @@ public sealed class Product
     private Product() { }
 
     public static Product Create(
+        Guid companyId,
         ProductType type,
         string productCode,
         string productDescription,
         string detailedType)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new ArgumentException("CompanyId is required.", nameof(companyId));
+        }
         if (string.IsNullOrWhiteSpace(productCode))
         {
             throw new ArgumentException("ProductCode is required.", nameof(productCode));
@@ -38,6 +44,7 @@ public sealed class Product
         return new Product
         {
             Id = Guid.NewGuid(),
+            CompanyId = companyId,
             Type = type,
             ProductCode = productCode.Trim(),
             ProductDescription = productDescription.Trim(),

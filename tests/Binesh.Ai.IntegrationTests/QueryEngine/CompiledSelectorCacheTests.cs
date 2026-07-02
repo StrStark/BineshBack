@@ -7,6 +7,8 @@ namespace Binesh.Ai.IntegrationTests.QueryEngine;
 
 public sealed class CompiledSelectorCacheTests
 {
+    private static readonly Guid CompanyId = Guid.NewGuid();
+
     [Fact]
     public void Get_ReturnsSameDelegateOnRepeatCall()
     {
@@ -40,7 +42,7 @@ public sealed class CompiledSelectorCacheTests
         var paymentReliability = schema.GetField("PaymentReliability");
 
         var person = Person.Create("Ali", "Ahmadi", null, null, "0911", null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.75f, person);
+        var customer = Customer.Create(CompanyId, CustomerType.MoshtarianKhanegi, true, 0.75f, person);
 
         var getter = cache.Get(typeof(Customer), paymentReliability);
         Assert.Equal(0.75f, getter(customer));
@@ -54,7 +56,7 @@ public sealed class CompiledSelectorCacheTests
         var mobile = schema.GetField("Mobile");
 
         var person = Person.Create("Ali", "Ahmadi", null, null, "+989121234567", null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.5f, person);
+        var customer = Customer.Create(CompanyId, CustomerType.MoshtarianKhanegi, true, 0.5f, person);
 
         var getter = cache.Get(typeof(Customer), mobile);
         Assert.Equal("+989121234567", getter(customer));
@@ -68,7 +70,7 @@ public sealed class CompiledSelectorCacheTests
         var type = schema.GetField("CustomerType");
 
         var person = Person.Create("X", null, null, null, null, null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.Personnel, true, 0.5f, person);
+        var customer = Customer.Create(CompanyId, CustomerType.Personnel, true, 0.5f, person);
 
         var getter = cache.Get(typeof(Customer), type);
         Assert.Equal(CustomerType.Personnel, getter(customer));

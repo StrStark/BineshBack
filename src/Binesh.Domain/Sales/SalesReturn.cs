@@ -12,6 +12,7 @@ namespace Binesh.Domain.Sales;
 public sealed class SalesReturn
 {
     public Guid Id { get; private set; }
+    public Guid CompanyId { get; private set; }
     public DateTime Date { get; private set; }
 
     /// <summary>Total line price in Iranian Rial. Bigint.</summary>
@@ -36,6 +37,7 @@ public sealed class SalesReturn
     private SalesReturn() { }
 
     public static SalesReturn Create(
+        Guid companyId,
         DateTime date,
         long price,
         float quantity,
@@ -44,6 +46,10 @@ public sealed class SalesReturn
         Guid productId,
         Guid counterpartyId)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new ArgumentException("CompanyId is required.", nameof(companyId));
+        }
         if (price < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(price), "Price cannot be negative.");
@@ -68,6 +74,7 @@ public sealed class SalesReturn
         return new SalesReturn
         {
             Id = Guid.NewGuid(),
+            CompanyId = companyId,
             Date = EnsureUtc(date),
             Price = price,
             Quantity = quantity,

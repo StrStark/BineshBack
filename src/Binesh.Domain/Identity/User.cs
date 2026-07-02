@@ -18,6 +18,7 @@ public sealed class User : IdentityUser<Guid>
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? JobTitle { get; set; }
+    public Guid? CompanyId { get; set; }
 
     public DateTimeOffset? BirthDate { get; set; }
     public string? ProfileImageName { get; set; }

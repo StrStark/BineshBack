@@ -1,4 +1,6 @@
 using Binesh.Application.Abstractions;
+using Binesh.Infrastructure.Ai;
+using Binesh.Infrastructure.Bi;
 using Binesh.Infrastructure.Configuration;
 using Binesh.Infrastructure.Persistence;
 using Binesh.Infrastructure.Storage;
@@ -21,6 +23,11 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<BiSourceSettings>()
+            .Bind(configuration.GetSection(BiSourceSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddDbContext<BineshDbContext>((sp, options) =>
         {
             var settings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value;
@@ -36,6 +43,10 @@ public static class DependencyInjection
         // Expose the same scoped instance via the abstraction so handlers can
         // inject IBineshDbContext.
         services.AddScoped<IBineshDbContext>(sp => sp.GetRequiredService<BineshDbContext>());
+        services.AddDataProtection();
+        services.AddScoped<IAiSettingsProtector, DataProtectionAiSettingsProtector>();
+        services.AddScoped<IUserAiSettingsResolver, UserAiSettingsResolver>();
+        services.AddSingleton<IBiAnalyticsService, BiAnalyticsService>();
 
         // ── Round 15 — object storage (MinIO) ────────────────────────────────
         services.AddOptions<MinioSettings>()

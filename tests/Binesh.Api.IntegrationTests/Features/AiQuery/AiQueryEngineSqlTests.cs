@@ -24,6 +24,7 @@ public sealed class AiQueryEngineSqlTests(BineshApiFactory factory)
     private Guid _productCarpet;
     private Guid _productRug;
     private Guid _customerTehran;
+    private Guid _companyId;
 
     public async Task InitializeAsync()
     {
@@ -156,6 +157,7 @@ public sealed class AiQueryEngineSqlTests(BineshApiFactory factory)
         for (var i = 0; i < 5_000; i++)
         {
             bulk.Add(Sale.Create(
+                _companyId,
                 new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(i),
                 price: i,
                 quantity: 1, deliveredQuantity: 1, docNumber: 9000 + i,
@@ -213,11 +215,12 @@ public sealed class AiQueryEngineSqlTests(BineshApiFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        _companyId = await db.Companies.Select(c => c.Id).FirstAsync();
 
-        var carpet = Product.Create(ProductType.Carpet, "AI-CARPET", "Engine fixture carpet", "600");
-        var rug = Product.Create(ProductType.Rug, "AI-RUG", "Engine fixture rug", "small");
+        var carpet = Product.Create(_companyId, ProductType.Carpet, "AI-CARPET", "Engine fixture carpet", "600");
+        var rug = Product.Create(_companyId, ProductType.Rug, "AI-RUG", "Engine fixture rug", "small");
         var person = Person.Create("Engine", "Buyer", null, null, "0921", null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, person);
+        var customer = Customer.Create(_companyId, CustomerType.MoshtarianKhanegi, true, 0.8f, person);
         db.Products.AddRange(carpet, rug);
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
@@ -227,6 +230,7 @@ public sealed class AiQueryEngineSqlTests(BineshApiFactory factory)
         _customerTehran = customer.Id;
 
         Sale NewSale(long price, Guid productId) => Sale.Create(
+            _companyId,
             new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc),
             price, quantity: 1, deliveredQuantity: 1, docNumber: (int)price,
             productId: productId, counterpartyId: customer.Id);

@@ -13,6 +13,7 @@ public sealed class SeedSettings
     public const string SectionName = "Seed";
 
     public SuperAdminSeed SuperAdmin { get; set; } = new();
+    public CompanySeed Company { get; set; } = new();
 
     /// <summary>
     /// When <c>true</c>, the dev/demo data seeder populates products, customers,
@@ -26,5 +27,11 @@ public sealed class SeedSettings
         public string? PhoneNumber { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
+    }
+
+    public sealed class CompanySeed
+    {
+        public string Name { get; set; } = "Binesh";
+        public string Slug { get; set; } = "binesh";
     }
 }

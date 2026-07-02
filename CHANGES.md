@@ -1312,3 +1312,100 @@ With the rewrite at endpoint parity for all interactive features and the cutover
 documented, the only remaining work is the deliberately-deferred items: the data
 sync / ETL replacement (Round 14), the three PARITY gaps the frontend may need,
 and granular per-user permissions. None of these block standing up the new stack.
+
+---
+
+## Round 17 - Frontend API ownership, tenant dashboards, and live BI source
+
+Moves the current Next API surface toward backend ownership and replaces the
+frontend Prisma/mock dashboard data path with tenant-scoped dashboard
+configuration plus approved live BI queries. ETL remains intentionally out of
+scope.
+
+### Added
+- **Route migration checklist**: [FRONTEND_API_MIGRATION.md](./FRONTEND_API_MIGRATION.md)
+  freezes the 49 current Next API routes and maps each one to an exact backend
+  route, a refactored equivalent, a temporary proxy, or a deferred UI contract.
+- **Company tenancy**: new `companies` table, `CompanyId` on users, default
+  dev company seeding, and company-scoped dashboard/ticket access. SuperAdmin
+  can cross company; Admin/User are scoped.
+- **Dashboard persistence**: `dashboards` table stores metadata and versionable
+  `configJson` only. Save-time validation checks dataset ids, field names,
+  aggregations, filters, and order fields against the BI catalog.
+- **Support tickets**: user and admin ticket endpoints under `/api/tickets` and
+  `/api/admin/tickets`, with company scoping and reply history.
+- **Per-user AI settings**: `/api/users/me/ai-settings` and compatibility
+  `/api/ai-settings`; API keys are encrypted at rest, masked on read, and never
+  returned raw.
+- **User-aware AI provider resolution**: orchestration uses a user's configured
+  API key/model/base URL when present, otherwise falls back to global
+  `OpenAI__*` settings.
+- **BI source configuration**: SQL Server source is built from env vars
+  (`BI_SQL_HOST`, `BI_SQL_PORT`, `BI_SQL_USERNAME`, `BI_SQL_PASSWORD`,
+  `BI_SQL_DEFAULT_DATABASE`, `BI_SQL_ANBAR_DATABASE`,
+  `BI_SQL_HESAB_DATABASE`, `BI_SQL_ENCRYPT`,
+  `BI_SQL_TRUST_SERVER_CERTIFICATE`, `BI_SQL_COMMAND_TIMEOUT`) and wired into
+  `docker-compose.yml` / `.env.example`.
+- **BI analytics service**: read-only, whitelisted datasets from the SQL Server
+  handoff (`Sale`, `Product`, `Customer`, `WarehouseItem`,
+  `WarehouseTransaction`, `FinancialTransaction`) with parameterized filtering,
+  grouping, aggregation, order, and limit support. No arbitrary frontend SQL is
+  accepted.
+- **Analytics/dashboard routes**: `/api/data-sources`,
+  `/api/data-sources/{id}/schema`, `/api/analytics/query`, `/api/db-schema`,
+  `/api/db-query`, `/api/dashboards`, and `/api/dashboards/{id}/render`.
+- **Warehouse compatibility routes**: `/api/warehouse`, `/api/warehouse/status`,
+  `/api/warehouse/flow`, `/api/warehouse/bubble`, and
+  `/api/warehouse/fast-moving` backed by the BI analytics service.
+- **AI helper compatibility routes**: `/api/ai/models`,
+  `/api/ai/monitoring`, and `/api/ai/generate-widget`.
+- **Runtime AI dashboard tool**: `query_dashboard_widgets`, generated from saved
+  dashboard configs and executed through the same analytics service used for
+  dashboard rendering.
+- **EF migration**:
+  `20260702004510_AddTenantDashboardBiAndAiSettings` creates companies,
+  dashboards, support tickets/messages, user AI settings, user company id, and
+  FK/index constraints.
+
+### Verified
+- `dotnet build .\Binesh.sln --no-restore` - clean, 0 errors.
+- New integration coverage:
+  - `AiSettingsTests` verifies save/read/clear behavior and confirms raw API
+    keys are never returned.
+  - `DashboardTests` verifies dashboard CRUD stores config JSON without live SQL
+    execution and rejects invalid BI fields.
+- `dotnet test .\Binesh.sln --no-build --verbosity minimal` - green:
+  `Binesh.Ai.IntegrationTests` 55/55 pass and
+  `Binesh.Api.IntegrationTests` 154/154 pass. Domain/Application test projects
+  currently contain no test cases.
+
+---
+
+## Round 18 - Operational tenant scoping
+
+Completes Step 2 of the frontend/backend migration plan: company tenancy now
+applies to the operational records used by sales, product, customer, and
+financial APIs, not only users/dashboards/tickets.
+
+### Added
+- `CompanyId` ownership on `Customer`, `Product`, `Sale`, `SalesReturn`,
+  `FinancialEntry`, and `FinancialMappingSettings`.
+- EF Core tenant query filters for those operational entities. Existing list,
+  get, update, delete, summary, panel, and AI query flows now read through the
+  current request's company boundary automatically.
+- `company_id` JWT claim and HTTP-backed `ITenantContext` so application
+  handlers can stamp new tenant-owned rows without passing company ids through
+  request bodies.
+- Login/refresh/bootstrap fallback that attaches legacy or test-created users
+  without `CompanyId` to the default `binesh` company before issuing scoped
+  tokens.
+- Company delete guard now blocks deletion when the company owns operational
+  rows, in addition to users/dashboards/tickets.
+- EF migration `20260702113108_AddOperationalTenantScoping`, with safe backfill:
+  it ensures the default `binesh` company exists, fills existing operational
+  rows, then enforces non-null FKs and tenant-aware indexes.
+
+### Verified
+- `dotnet test .\Binesh.sln --no-restore` - green:
+  `Binesh.Ai.IntegrationTests` 55/55 pass and
+  `Binesh.Api.IntegrationTests` 154/154 pass.

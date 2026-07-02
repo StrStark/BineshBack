@@ -1,4 +1,5 @@
 using Binesh.Domain.Financial;
+using Binesh.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,6 +13,7 @@ internal sealed class FinancialEntryConfiguration : IEntityTypeConfiguration<Fin
 
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(e => e.CompanyId).IsRequired();
 
         builder.Property(e => e.Code).IsRequired().HasMaxLength(64);
         builder.Property(e => e.Name).IsRequired().HasMaxLength(256);
@@ -19,7 +21,12 @@ internal sealed class FinancialEntryConfiguration : IEntityTypeConfiguration<Fin
         builder.Property(e => e.Debit).HasColumnType("bigint").IsRequired();
         builder.Property(e => e.Credit).HasColumnType("bigint").IsRequired();
 
-        builder.HasIndex(e => e.Code).HasDatabaseName("ix_financial_entries_code");
-        builder.HasIndex(e => e.Type).HasDatabaseName("ix_financial_entries_type");
+        builder.HasOne<Company>()
+               .WithMany()
+               .HasForeignKey(e => e.CompanyId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => new { e.CompanyId, e.Code }).HasDatabaseName("ix_financial_entries_company_code");
+        builder.HasIndex(e => new { e.CompanyId, e.Type }).HasDatabaseName("ix_financial_entries_company_type");
     }
 }

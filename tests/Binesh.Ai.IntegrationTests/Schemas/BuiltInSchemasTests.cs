@@ -15,6 +15,7 @@ namespace Binesh.Ai.IntegrationTests.Schemas;
 /// </summary>
 public sealed class BuiltInSchemasTests
 {
+    private static readonly Guid CompanyId = Guid.NewGuid();
     private readonly CompiledSelectorCache _cache = new();
 
     [Fact]
@@ -24,7 +25,7 @@ public sealed class BuiltInSchemasTests
         var region = Region.Create("Iran", "Tehran", "Tehran");
         var person = Person.Create("Ali", "Ahmadi", "C-1", "021", "0912", "fax", "12", "Addr",
             new DateTimeOffset(1990, 1, 1, 0, 0, 0, TimeSpan.Zero), region);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, person);
+        var customer = Customer.Create(CompanyId, CustomerType.MoshtarianKhanegi, true, 0.8f, person);
 
         AssertEveryFieldResolves(schema, customer);
     }
@@ -33,7 +34,7 @@ public sealed class BuiltInSchemasTests
     public void ProductSchema_AllFieldsResolve()
     {
         var schema = ProductSchema.Build();
-        var product = Product.Create(ProductType.Carpet, "P-1", "Carpet", "600 reed");
+        var product = Product.Create(CompanyId, ProductType.Carpet, "P-1", "Carpet", "600 reed");
         AssertEveryFieldResolves(schema, product);
     }
 
@@ -41,7 +42,7 @@ public sealed class BuiltInSchemasTests
     public void InventoryEventSchema_AllFieldsResolve()
     {
         var schema = InventoryEventSchema.Build();
-        var product = Product.Create(ProductType.Carpet, "P-1", "Carpet", "600 reed");
+        var product = Product.Create(CompanyId, ProductType.Carpet, "P-1", "Carpet", "600 reed");
         var ev = InventoryEvent.Create(product.Id, InventoryEventType.Receipt,
             new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             quantity: 10, unitPrice: 100, totalPrice: 1000, factorNumber: 1,
@@ -53,7 +54,7 @@ public sealed class BuiltInSchemasTests
     public void FinancialSchema_AllFieldsResolve()
     {
         var schema = FinancialSchema.Build();
-        var entry = FinancialEntry.Create("1001", "Cash", "Asset", debit: 500, credit: 0);
+        var entry = FinancialEntry.Create(CompanyId, "1001", "Cash", "Asset", debit: 500, credit: 0);
         AssertEveryFieldResolves(schema, entry);
     }
 
@@ -71,6 +72,7 @@ public sealed class BuiltInSchemasTests
         var schema = SalesReturnSchema.Build();
         var (product, customer) = NewProductAndCustomer();
         var ret = SalesReturn.Create(
+            CompanyId,
             new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc),
             price: 200, quantity: 1, deliveredQuantity: 1, docNumber: 99,
             productId: product.Id, counterpartyId: customer.Id);
@@ -93,6 +95,7 @@ public sealed class BuiltInSchemasTests
     {
         var (product, customer) = NewProductAndCustomer();
         var sale = Sale.Create(
+            CompanyId,
             new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc),
             price: 1000, quantity: 2, deliveredQuantity: 2, docNumber: 5,
             productId: product.Id, counterpartyId: customer.Id);
@@ -103,10 +106,10 @@ public sealed class BuiltInSchemasTests
 
     private static (Product, Customer) NewProductAndCustomer()
     {
-        var product = Product.Create(ProductType.Carpet, "P-1", "Carpet", "600 reed");
+        var product = Product.Create(CompanyId, ProductType.Carpet, "P-1", "Carpet", "600 reed");
         var region = Region.Create("Iran", "Tehran", "Tehran");
         var person = Person.Create("Ali", "Ahmadi", null, null, "0912", null, null, null, null, region);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, person);
+        var customer = Customer.Create(CompanyId, CustomerType.MoshtarianKhanegi, true, 0.8f, person);
         return (product, customer);
     }
 

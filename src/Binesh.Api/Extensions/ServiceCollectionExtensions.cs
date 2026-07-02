@@ -1,9 +1,11 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Binesh.Application.Abstractions;
 using Binesh.Ai.Configuration;
 using Binesh.Api.Configuration;
 using Binesh.Api.ErrorHandling;
 using Binesh.Api.HealthChecks;
+using Binesh.Api.Tenancy;
 using Binesh.Infrastructure.Configuration;
 using HealthChecks.NpgSql;
 using Microsoft.AspNetCore.Http;
@@ -107,6 +109,7 @@ public static class ServiceCollectionExtensions
         // RFC 7807 problem details everywhere
         services.AddProblemDetails();
         services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddScoped<ITenantContext, HttpTenantContext>();
 
         // Health
         var healthBuilder = services.AddHealthChecks()

@@ -26,7 +26,8 @@ public sealed class VerifyOtpHandler(
     IBineshDbContext db,
     IOtpService otpService,
     IJwtTokenService jwtTokenService,
-    IOptions<JwtSettings> jwtOptions)
+    IOptions<JwtSettings> jwtOptions,
+    IOptions<SeedSettings> seedOptions)
     : IRequestHandler<VerifyOtpCommand, VerifyOtpResponse>
 {
     public async Task<VerifyOtpResponse> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
@@ -52,9 +53,21 @@ public sealed class VerifyOtpHandler(
         await userManager.ResetAccessFailedCountAsync(user);
 
         // Phone is implicitly confirmed by a successful OTP.
+        var userChanged = false;
         if (!user.PhoneNumberConfirmed)
         {
             user.PhoneNumberConfirmed = true;
+            userChanged = true;
+        }
+
+        if (user.CompanyId is null)
+        {
+            user.CompanyId = await ResolveDefaultCompanyIdAsync(cancellationToken);
+            userChanged = true;
+        }
+
+        if (userChanged)
+        {
             await userManager.UpdateAsync(user);
         }
 
@@ -82,5 +95,24 @@ public sealed class VerifyOtpHandler(
             RefreshToken: rawRefresh,
             AccessTokenExpiresAt: DateTime.UtcNow.Add(jwt.AccessTokenLifetime),
             RefreshTokenExpiresAt: refreshEntity.ExpiresAt.UtcDateTime);
+    }
+
+    private async Task<Guid> ResolveDefaultCompanyIdAsync(CancellationToken cancellationToken)
+    {
+        var seed = seedOptions.Value.Company;
+        var slug = string.IsNullOrWhiteSpace(seed.Slug) ? "binesh" : seed.Slug.Trim().ToLowerInvariant();
+
+        var companyId = await db.Companies
+            .Where(c => c.Slug == slug)
+            .Select(c => (Guid?)c.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        companyId ??= await db.Companies
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => (Guid?)c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return companyId
+            ?? throw new InvalidOperationException("No company exists to attach the authenticated user.");
     }
 }

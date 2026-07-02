@@ -23,6 +23,7 @@ public static class AiEndpoints
             .WithName(nameof(AskAi))
             .Produces<AskAiResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem();
+        group.MapAiUtilityEndpoints();
 
         return routes;
     }

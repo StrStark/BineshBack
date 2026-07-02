@@ -40,6 +40,7 @@ public sealed class GetMyProfileHandler(UserManager<User> userManager, IFileStor
             role,
             user.PhoneNumberConfirmed,
             user.CreatedAt,
-            imageUrl);
+            ProfileImageUrl: imageUrl,
+            CompanyId: user.CompanyId);
     }
 }

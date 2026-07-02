@@ -60,6 +60,6 @@ public sealed class SetProfileImageHandler(
         return new UserDto(
             user.Id, user.PhoneNumber ?? string.Empty, user.FirstName, user.LastName,
             user.JobTitle, user.BirthDate, user.ProfileImageName, role,
-            user.PhoneNumberConfirmed, user.CreatedAt);
+            user.PhoneNumberConfirmed, user.CreatedAt, CompanyId: user.CompanyId);
     }
 }

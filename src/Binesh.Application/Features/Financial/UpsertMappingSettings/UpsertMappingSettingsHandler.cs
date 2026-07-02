@@ -6,11 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Binesh.Application.Features.Financial.UpsertMappingSettings;
 
-public sealed class UpsertMappingSettingsHandler(IBineshDbContext db)
+public sealed class UpsertMappingSettingsHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<UpsertMappingSettingsCommand, MappingSettingsDto>
 {
     public async Task<MappingSettingsDto> Handle(UpsertMappingSettingsCommand request, CancellationToken cancellationToken)
     {
+        var companyId = tenantContext.RequireCompanyId();
         var existing = await db.FinancialMappingSettings.SingleOrDefaultAsync(cancellationToken);
 
         var operationalCost = request.OperationalCost ?? [];
@@ -28,6 +29,7 @@ public sealed class UpsertMappingSettingsHandler(IBineshDbContext db)
         if (existing is null)
         {
             settings = FinancialMappingSettings.Create(
+                companyId,
                 operationalCost, payables, toCalculateSales, toCalculateLiquidity,
                 toCalculateGrossProfitLoss, toCalculateOperatingProfitLoss,
                 toCalculateProfitLossBeforTax, toCalculateNetProfitLoss,

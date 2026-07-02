@@ -34,6 +34,7 @@ public sealed class GetSummaryTests(BineshApiFactory factory)
     private readonly HttpClient _client = factory.CreateClient();
     private Guid _productId;
     private Guid _customerId;
+    private Guid _companyId;
 
     public async Task InitializeAsync()
     {
@@ -130,7 +131,7 @@ public sealed class GetSummaryTests(BineshApiFactory factory)
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private Sale NewSale(DateTime date, long price, float qty, int docNumber) =>
-        Sale.Create(date, price, qty, qty, docNumber, _productId, _customerId);
+        Sale.Create(_companyId, date, price, qty, qty, docNumber, _productId, _customerId);
 
     private async Task ResetDatabaseAsync()
     {
@@ -146,10 +147,11 @@ public sealed class GetSummaryTests(BineshApiFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        _companyId = await db.Companies.Select(c => c.Id).FirstAsync();
 
-        var product = Product.Create(ProductType.Carpet, "SUMMARY-FIX-1", "Summary fixture product", "x");
+        var product = Product.Create(_companyId, ProductType.Carpet, "SUMMARY-FIX-1", "Summary fixture product", "x");
         var person = Person.Create("Fixture", "Counterparty", null, null, null, null, null, null, null, null);
-        var customer = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.5f, person);
+        var customer = Customer.Create(_companyId, CustomerType.MoshtarianKhanegi, true, 0.5f, person);
 
         db.Products.Add(product);
         db.Customers.Add(customer);

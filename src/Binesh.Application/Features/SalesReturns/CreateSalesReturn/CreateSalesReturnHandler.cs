@@ -7,11 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Binesh.Application.Features.SalesReturns.CreateSalesReturn;
 
-public sealed class CreateSalesReturnHandler(IBineshDbContext db)
+public sealed class CreateSalesReturnHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<CreateSalesReturnCommand, SalesReturnDto>
 {
     public async Task<SalesReturnDto> Handle(CreateSalesReturnCommand request, CancellationToken cancellationToken)
     {
+        var companyId = tenantContext.RequireCompanyId();
         if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, cancellationToken))
         {
             throw new NotFoundException("Product", request.ProductId);
@@ -22,6 +23,7 @@ public sealed class CreateSalesReturnHandler(IBineshDbContext db)
         }
 
         var entity = SalesReturn.Create(
+            companyId,
             request.Date,
             request.Price,
             request.Quantity,

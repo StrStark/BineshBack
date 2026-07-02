@@ -1,4 +1,5 @@
 using Binesh.Domain.Sales;
+using Binesh.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,6 +13,7 @@ internal sealed class SalesReturnConfiguration : IEntityTypeConfiguration<SalesR
 
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(s => s.CompanyId).IsRequired();
 
         builder.Property(s => s.Date).IsRequired();
         builder.Property(s => s.Price).HasColumnType("bigint").IsRequired();
@@ -29,8 +31,13 @@ internal sealed class SalesReturnConfiguration : IEntityTypeConfiguration<SalesR
             .HasForeignKey(s => s.CounterpartyId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(s => s.Date).HasDatabaseName("ix_sales_returns_date");
-        builder.HasIndex(s => s.ProductId).HasDatabaseName("ix_sales_returns_product");
-        builder.HasIndex(s => s.CounterpartyId).HasDatabaseName("ix_sales_returns_counterparty");
+        builder.HasOne<Company>()
+            .WithMany()
+            .HasForeignKey(s => s.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(s => new { s.CompanyId, s.Date }).HasDatabaseName("ix_sales_returns_company_date");
+        builder.HasIndex(s => new { s.CompanyId, s.ProductId }).HasDatabaseName("ix_sales_returns_company_product");
+        builder.HasIndex(s => new { s.CompanyId, s.CounterpartyId }).HasDatabaseName("ix_sales_returns_company_counterparty");
     }
 }

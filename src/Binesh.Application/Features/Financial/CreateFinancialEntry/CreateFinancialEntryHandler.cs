@@ -6,12 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Binesh.Application.Features.Financial.CreateFinancialEntry;
 
-public sealed class CreateFinancialEntryHandler(IBineshDbContext db)
+public sealed class CreateFinancialEntryHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<CreateFinancialEntryCommand, FinancialEntryDto>
 {
     public async Task<FinancialEntryDto> Handle(CreateFinancialEntryCommand request, CancellationToken cancellationToken)
     {
-        var entry = FinancialEntry.Create(request.Code, request.Name, request.Type, request.Debit, request.Credit);
+        var entry = FinancialEntry.Create(
+            tenantContext.RequireCompanyId(),
+            request.Code,
+            request.Name,
+            request.Type,
+            request.Debit,
+            request.Credit);
         db.FinancialEntries.Add(entry);
         await db.SaveChangesAsync(cancellationToken);
 

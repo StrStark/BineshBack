@@ -1,4 +1,5 @@
 using Binesh.Domain.Products;
+using Binesh.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +12,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.ToTable("products");
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(p => p.CompanyId).IsRequired();
 
         builder.Property(p => p.Type).HasConversion<string>().HasMaxLength(50);
         builder.Property(p => p.ProductCode).HasMaxLength(100).IsRequired();
@@ -18,8 +20,13 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.DetailedType).HasMaxLength(200);
 
         // ProductCode is the upstream SKU — unique across the catalogue.
-        builder.HasIndex(p => p.ProductCode).IsUnique().HasDatabaseName("ix_products_code");
-        builder.HasIndex(p => p.Type).HasDatabaseName("ix_products_type");
+        builder.HasIndex(p => new { p.CompanyId, p.ProductCode }).IsUnique().HasDatabaseName("ix_products_company_code");
+        builder.HasIndex(p => new { p.CompanyId, p.Type }).HasDatabaseName("ix_products_company_type");
+
+        builder.HasOne<Company>()
+               .WithMany()
+               .HasForeignKey(p => p.CompanyId)
+               .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(p => p.Events)
                .WithOne()

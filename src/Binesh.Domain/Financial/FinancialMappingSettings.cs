@@ -14,6 +14,7 @@ namespace Binesh.Domain.Financial;
 public sealed class FinancialMappingSettings
 {
     public Guid Id { get; private set; }
+    public Guid CompanyId { get; private set; }
 
     public IReadOnlyList<DetailedItem> OperationalCost { get; private set; } = [];
     public IReadOnlyList<DetailedItem> Payables { get; private set; } = [];
@@ -33,6 +34,7 @@ public sealed class FinancialMappingSettings
     private FinancialMappingSettings() { }
 
     public static FinancialMappingSettings Create(
+        Guid companyId,
         IReadOnlyList<DetailedItem>? operationalCost = null,
         IReadOnlyList<DetailedItem>? payables = null,
         IReadOnlyList<DetailedItem>? toCalculateSales = null,
@@ -44,9 +46,15 @@ public sealed class FinancialMappingSettings
         IReadOnlyList<DetailedItem>? toCalculateAccumulatedProfitLoss = null,
         IReadOnlyList<DetailedItem>? toCalculateEquity = null)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new ArgumentException("CompanyId is required.", nameof(companyId));
+        }
+
         return new FinancialMappingSettings
         {
             Id = Guid.NewGuid(),
+            CompanyId = companyId,
             OperationalCost = operationalCost ?? [],
             Payables = payables ?? [],
             ToCalculateSales = toCalculateSales ?? [],

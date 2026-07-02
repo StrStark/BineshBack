@@ -1,13 +1,18 @@
 using Binesh.Ai;
+using Binesh.Api.Endpoints.Analytics;
 using Binesh.Api.Endpoints.Ai;
 using Binesh.Api.Endpoints.Auth;
 using Binesh.Api.Endpoints.Chat;
+using Binesh.Api.Endpoints.Companies;
 using Binesh.Api.Endpoints.Customers;
+using Binesh.Api.Endpoints.Dashboards;
 using Binesh.Api.Endpoints.Financial;
 using Binesh.Api.Endpoints.Products;
 using Binesh.Api.Endpoints.Sales;
 using Binesh.Api.Endpoints.SalesReturns;
+using Binesh.Api.Endpoints.Tickets;
 using Binesh.Api.Endpoints.Users;
+using Binesh.Api.Endpoints.Warehouse;
 using Binesh.Api.Extensions;
 using Binesh.Application;
 using Binesh.Identity;
@@ -84,7 +89,13 @@ try
     app.MapSalesEndpoints();
     app.MapSalesReturnsEndpoints();
     app.MapFinancialEndpoints();
+    app.MapCompaniesEndpoints();
+    app.MapDashboardEndpoints();
+    app.MapTicketsEndpoints();
+    app.MapAnalyticsEndpoints();
+    app.MapWarehouseEndpoints();
     app.MapAiEndpoints();
+    app.MapAiSettingsEndpoints();
     app.MapChatEndpoints();
     app.MapChatStreamingEndpoints();
 

@@ -37,6 +37,7 @@ public sealed class SalesPanelTests(BineshApiFactory factory)
 
     private Guid _prodA, _prodB;      // DetailedType "A" / "B"
     private Guid _custKhanegi, _custBedehkar;
+    private Guid _companyId;
 
     public async Task InitializeAsync()
     {
@@ -233,7 +234,7 @@ public sealed class SalesPanelTests(BineshApiFactory factory)
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
         var date = DateTime.SpecifyKind(
             DateTime.Parse(day, CultureInfo.InvariantCulture), DateTimeKind.Utc);
-        db.Sales.Add(Sale.Create(date, price, delivered, delivered, docNumber, productId, customerId));
+        db.Sales.Add(Sale.Create(_companyId, date, price, delivered, delivered, docNumber, productId, customerId));
         await db.SaveChangesAsync();
     }
 
@@ -243,7 +244,7 @@ public sealed class SalesPanelTests(BineshApiFactory factory)
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
         var date = DateTime.SpecifyKind(
             DateTime.Parse(day, CultureInfo.InvariantCulture), DateTimeKind.Utc);
-        db.SalesReturns.Add(SalesReturn.Create(date, price, 1f, 1f, 1, productId, customerId));
+        db.SalesReturns.Add(SalesReturn.Create(_companyId, date, price, 1f, 1f, 1, productId, customerId));
         await db.SaveChangesAsync();
     }
 
@@ -251,13 +252,14 @@ public sealed class SalesPanelTests(BineshApiFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BineshDbContext>();
+        _companyId = await db.Companies.Select(c => c.Id).FirstAsync();
 
-        var productA = Product.Create(ProductType.Carpet, "PROD-A", "Carpet line A", "A");
-        var productB = Product.Create(ProductType.Carpet, "PROD-B", "Carpet line B", "B");
+        var productA = Product.Create(_companyId, ProductType.Carpet, "PROD-A", "Carpet line A", "A");
+        var productB = Product.Create(_companyId, ProductType.Carpet, "PROD-B", "Carpet line B", "B");
         var p1 = Person.Create("Ali", "Ahmadi", null, null, "09121111111", null, null, null, null, null);
         var p2 = Person.Create("Sara", "Karimi", null, null, "09122222222", null, null, null, null, null);
-        var c1 = Customer.Create(CustomerType.MoshtarianKhanegi, true, 0.8f, p1);
-        var c2 = Customer.Create(CustomerType.Bedehkaran, true, 0.5f, p2);
+        var c1 = Customer.Create(_companyId, CustomerType.MoshtarianKhanegi, true, 0.8f, p1);
+        var c2 = Customer.Create(_companyId, CustomerType.Bedehkaran, true, 0.5f, p2);
 
         db.Products.AddRange(productA, productB);
         db.Customers.AddRange(c1, c2);

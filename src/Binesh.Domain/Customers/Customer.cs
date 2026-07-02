@@ -10,6 +10,7 @@ namespace Binesh.Domain.Customers;
 public sealed class Customer
 {
     public Guid Id { get; private set; }
+    public Guid CompanyId { get; private set; }
 
     public CustomerType Type { get; private set; }
 
@@ -30,11 +31,16 @@ public sealed class Customer
     private Customer() { }
 
     public static Customer Create(
+        Guid companyId,
         CustomerType type,
         bool active,
         float paymentReliability,
         Person person)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new ArgumentException("CompanyId is required.", nameof(companyId));
+        }
         if (paymentReliability is < 0f or > 1f)
         {
             throw new ArgumentOutOfRangeException(nameof(paymentReliability),
@@ -44,6 +50,7 @@ public sealed class Customer
         return new Customer
         {
             Id = Guid.NewGuid(),
+            CompanyId = companyId,
             Type = type,
             Active = active,
             PaymentReliability = paymentReliability,

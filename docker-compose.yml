@@ -107,6 +107,17 @@ services:
       OpenAI__BaseUrl:   ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OpenAI__Model:     ${OPENAI_MODEL:-gpt-4o-mini}
       OpenAI__FallbackModel: ${OPENAI_FALLBACK_MODEL:-}
+      # Live read-only BI source (SQL Server on the Windows host).
+      BiSources__DefaultSqlServer__Host: ${BI_SQL_HOST:-host.docker.internal}
+      BiSources__DefaultSqlServer__Port: ${BI_SQL_PORT:-1433}
+      BiSources__DefaultSqlServer__Username: ${BI_SQL_USERNAME:-}
+      BiSources__DefaultSqlServer__Password: ${BI_SQL_PASSWORD:-}
+      BiSources__DefaultSqlServer__DefaultDatabase: ${BI_SQL_DEFAULT_DATABASE:-Anbar}
+      BiSources__DefaultSqlServer__AnbarDatabase: ${BI_SQL_ANBAR_DATABASE:-Anbar}
+      BiSources__DefaultSqlServer__HesabDatabase: ${BI_SQL_HESAB_DATABASE:-Hesab}
+      BiSources__DefaultSqlServer__Encrypt: ${BI_SQL_ENCRYPT:-true}
+      BiSources__DefaultSqlServer__TrustServerCertificate: ${BI_SQL_TRUST_SERVER_CERTIFICATE:-true}
+      BiSources__DefaultSqlServer__CommandTimeout: ${BI_SQL_COMMAND_TIMEOUT:-0}
       # MinIO (Round 15). MinioSettings is ValidateOnStart with AccessKey/SecretKey
       # [Required] and no defaults — the API will NOT boot without these.
       Minio__Endpoint:   ${MINIO_ENDPOINT:-minio:9000}

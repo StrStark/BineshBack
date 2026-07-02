@@ -64,6 +64,7 @@ public sealed class CreateUserHandler(UserManager<User> userManager)
             user.ProfileImageName,
             AppRoles.Admin,
             user.PhoneNumberConfirmed,
-            user.CreatedAt);
+            user.CreatedAt,
+            CompanyId: user.CompanyId);
     }
 }

@@ -10,13 +10,14 @@ namespace Binesh.Ai.IntegrationTests.QueryEngine;
 /// </summary>
 public sealed class FilterExpressionBuilderTests
 {
+    private static readonly Guid CompanyId = Guid.NewGuid();
     private readonly EntitySchema _schema = ProductSchema.Build();
 
     private readonly List<Product> _products =
     [
-        Product.Create(ProductType.Carpet, "P-1", "C1", "600"),
-        Product.Create(ProductType.Carpet, "P-2", "C2", "700"),
-        Product.Create(ProductType.Rug,    "R-1", "R1", "small"),
+        Product.Create(CompanyId, ProductType.Carpet, "P-1", "C1", "600"),
+        Product.Create(CompanyId, ProductType.Carpet, "P-2", "C2", "700"),
+        Product.Create(CompanyId, ProductType.Rug,    "R-1", "R1", "small"),
     ];
 
     [Fact]

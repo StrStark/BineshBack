@@ -7,11 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Binesh.Application.Features.Sales.CreateSale;
 
-public sealed class CreateSaleHandler(IBineshDbContext db)
+public sealed class CreateSaleHandler(IBineshDbContext db, ITenantContext tenantContext)
     : IRequestHandler<CreateSaleCommand, SaleDto>
 {
     public async Task<SaleDto> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
+        var companyId = tenantContext.RequireCompanyId();
         if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, cancellationToken))
         {
             throw new NotFoundException("Product", request.ProductId);
@@ -22,6 +23,7 @@ public sealed class CreateSaleHandler(IBineshDbContext db)
         }
 
         var sale = Sale.Create(
+            companyId,
             request.Date,
             request.Price,
             request.Quantity,
